@@ -6,7 +6,8 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
-#include<opencv2/legacy/legacy.hpp>
+#include <opencv2/legacy/legacy.hpp>
+#include <opencv2/stitching/stitcher.hpp>
 #include <iostream>  
 #include <stdlib.h>
 
@@ -37,5 +38,6 @@ void RemapShow(String);
 void SurfDectection(String);
 void AffineTransformation(String);
 void ImageMatcher(String, String);
+void imageSticher(String, String, String);
 
 #endif

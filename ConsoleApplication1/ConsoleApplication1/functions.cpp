@@ -17,6 +17,7 @@ int g_nErodeDilateNum = 0;
 int g_nTopBlackHatNum = 0;
 int g_nElementShape = 0;
 Mat img, gray, dst;
+//double dist = 0;
 
 static void onTrackbar(int, void*) {
 	Mat newImage = Mat::zeros(img.size(), img.type());;
@@ -515,15 +516,33 @@ void AffineTransformation(String path) {
 	waitKey();
 }
 
+Mat fundamental_matrix;
+Mat homography_matrix;
+Mat src1, src2;
+String path;
+
+static void onMouse2(int event, int x, int y, int, void*) {
+	if (event != CV_EVENT_LBUTTONDOWN)
+		return;
+	src2 = imread(path);
+	Vec3d coord = Vec3d(x, y, 1);
+	cout << "src1: " << coord << endl;
+	Mat dest_coord = homography_matrix * Mat(coord);
+//	perspectiveTransform(coord, dest_coord, homography_matrix);
+//	cout << "src2: " << dest_coord[0] << ", " << dest_coord[1] << endl;
+	circle(src2, Point((int)(dest_coord.at<double>(0, 0)/dest_coord.at<double>(2, 0)), (int)(dest_coord.at<double>(1, 0) / dest_coord.at<double>(2, 0))), 5, Scalar(0, 0, 255), 2);
+	imshow("src2", src2);
+}
+
 void ImageMatcher(String path1, String path2) {
-	Mat src1, src2, dst;
+	path = path2;
 	src1 = imread(path1);
 	src2 = imread(path2);
 
 	int minHessian = 800;         //400-800 works well
 	SurfFeatureDetector detector(minHessian);
 	vector<KeyPoint> keypoints1, keypoints2;
-	Mat ROI = src1(Rect(0, 0, src1.cols/2, src1.rows/2));
+	Mat ROI = src1(Rect(0, 0, src1.cols, src1.rows));
 	detector.detect(ROI, keypoints1);
 	detector.detect(src2, keypoints2);
 
@@ -535,11 +554,72 @@ void ImageMatcher(String path1, String path2) {
 	BruteForceMatcher<L2<float>> matcher;
 	vector<DMatch> matches;
 	matcher.match(descriptor1, descriptor2, matches);
+	sort(matches.begin(), matches.end(), [](const DMatch& a, const DMatch& b) -> bool { return a.distance < b.distance;  });
+	static double dist = matches[0].distance;
+	auto last = remove_if(matches.begin(), matches.end(), [](const DMatch& a) -> bool { return a.distance > 3 * dist;});
+	vector<DMatch> newMatches(matches.begin(), last);
 
-	Mat imgMatches;
-	drawMatches(src1, keypoints1, src2, keypoints2, matches, dst);
-	namedWindow("After match", WINDOW_NORMAL);
-	imshow("After match", dst);
+	vector<Point2f> matchedPoints1;
+	vector<Point2f> matchedPoints2;
+	for (int i = 0; i < newMatches.size(); i++) {
+		matchedPoints1.push_back(keypoints1[newMatches[i].queryIdx].pt);
+		matchedPoints2.push_back(keypoints2[newMatches[i].trainIdx].pt);
+	}
+	fundamental_matrix = findFundamentalMat(matchedPoints1, matchedPoints2, FM_RANSAC, 3, 0.99);
+	homography_matrix = findHomography(matchedPoints1, matchedPoints2);
 
-	waitKey(0);
+	//drawMatches(src1, keypoints1, src2, keypoints2, newMatches, dst);
+	//namedWindow("After match");
+	//imshow("After match", dst);
+
+	namedWindow("src1");
+	imshow("src1", src1);
+	namedWindow("src2");
+	setMouseCallback("src1", onMouse2, 0);
+
+	waitKey();
+}
+
+void imageSticher(String path1, String path2, String path3) {
+	Mat src1 = imread(path1);
+	Mat src2 = imread(path2);
+	Mat src3 = imread(path3);
+	Mat img1;
+	Mat img2;
+	Mat img3;
+	if (src1.cols == 0 || src2.cols == 0) {
+		cout << "Error reading file " << endl;
+		return;
+	}
+	pyrDown(src1, img1);
+	pyrDown(img1, img1);
+//	imshow("img1", img1);
+	
+	pyrDown(src2, img2);
+	pyrDown(img2, img2);
+//	imshow("img2", img2);
+
+	pyrDown(src3, img3);
+	pyrDown(img3, img3);
+	imshow("img3", img3);
+
+	vector<Mat> imgs;
+	imgs.push_back(img1);
+	imgs.push_back(img2);
+	imgs.push_back(img3);
+
+	Mat pano;
+	vector<Mat> out;
+	Stitcher stitcher = Stitcher::createDefault();
+	Stitcher::Status status = stitcher.stitch(imgs, out);
+
+	if (status != Stitcher::OK)
+	{
+		cout << "Can't stitch images, error code = " << int(status) << endl;
+		return;
+	}
+
+	namedWindow("result");
+	imwrite("pano.jpg", out[0]);
+	//	imshow("result", pano);
 }

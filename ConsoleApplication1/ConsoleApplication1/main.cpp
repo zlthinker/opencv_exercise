@@ -22,7 +22,8 @@ int main()
 //	RemapShow("me.jpg");
 //	SurfDectection("rectan.png");
 //	AffineTransformation("pic.jpg");
-	ImageMatcher("rect.jpg", "rectan.png");
+//	ImageMatcher("image002.jpg", "image004.jpg");
+	imageSticher("DJI_0001.jpg", "DJI_0002.jpg", "DJI_0003.jpg");
 
 	return 0;
 }

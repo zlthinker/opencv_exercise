@@ -60,8 +60,8 @@ int main(int argc, char* argv[])
 //	int retval = parseCmdArgs(argc, argv);
 //	if (retval) return -1;
 
-	Mat img1 = imread("slides1.jpg");
-	Mat img2 = imread("slides2.jpg");
+	Mat img1 = imread("DJI_0001.jpg");
+	Mat img2 = imread("DJI_0002.jpg");
 	if (img1.cols == 0 || img2.cols == 0) {
 		cout << "Error reading file "<< endl;
 		return -1;
@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
 	imgs.push_back(img2);
 
 	Mat pano;
-	Stitcher stitcher = Stitcher::createDefault(try_use_gpu);
+	Stitcher stitcher = Stitcher::createDefault();
 	Stitcher::Status status = stitcher.stitch(imgs, pano);
 
 	if (status != Stitcher::OK)
@@ -79,7 +79,9 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	imshow("result", pano);
+	namedWindow("result");
+	imwrite("pano.jpg", pano);
+//	imshow("result", pano);
 	return 0;
 }
 
